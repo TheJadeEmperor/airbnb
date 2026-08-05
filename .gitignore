@@ -1,3 +1,14 @@
 wp-config.php
 wp-content/uploads/
 vendor/
+wp-admin/
+wp-includes/
+
+# Missing — probably worth adding:
+node_modules/
+wp-content/cache/
+wp-content/upgrade/
+wp-content/backup*/
+*.log
+.env
+.DS_Store
