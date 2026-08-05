@@ -15,7 +15,7 @@ if ( ! function_exists( 'add_filter' ) ) {
  * {@internal Nobody should be able to overrule the real version number as this can cause
  *            serious issues with the options, so no if ( ! defined() ).}}
  */
-define( 'WPSEO_VERSION', '23.4' );
+define( 'WPSEO_VERSION', '28.1' );
 
 
 if ( ! defined( 'WPSEO_PATH' ) ) {
@@ -34,9 +34,9 @@ define( 'YOAST_VENDOR_NS_PREFIX', 'YoastSEO_Vendor' );
 define( 'YOAST_VENDOR_DEFINE_PREFIX', 'YOASTSEO_VENDOR__' );
 define( 'YOAST_VENDOR_PREFIX_DIRECTORY', 'vendor_prefixed' );
 
-define( 'YOAST_SEO_PHP_REQUIRED', '7.2.5' );
-define( 'YOAST_SEO_WP_TESTED', '6.6.1' );
-define( 'YOAST_SEO_WP_REQUIRED', '6.4' );
+define( 'YOAST_SEO_PHP_REQUIRED', '7.4' );
+define( 'YOAST_SEO_WP_TESTED', '7.0.2' );
+define( 'YOAST_SEO_WP_REQUIRED', '6.8' );
 
 if ( ! defined( 'WPSEO_NAMESPACES' ) ) {
 	define( 'WPSEO_NAMESPACES', true );
@@ -55,12 +55,10 @@ if ( ! defined( 'WPSEO_NAMESPACES' ) ) {
 function wpseo_auto_load( $class_name ) {
 	static $classes = null;
 
-	if ( $classes === null ) {
-		$classes = [
-			'wp_list_table'   => ABSPATH . 'wp-admin/includes/class-wp-list-table.php',
-			'walker_category' => ABSPATH . 'wp-includes/category-template.php',
-		];
-	}
+	$classes ??= [
+		'wp_list_table'   => ABSPATH . 'wp-admin/includes/class-wp-list-table.php',
+		'walker_category' => ABSPATH . 'wp-includes/category-template.php',
+	];
 
 	$cn = strtolower( $class_name );
 
@@ -120,7 +118,7 @@ if ( YOAST_ENVIRONMENT === 'development' && isset( $yoast_autoloader ) ) {
 			$yoast_autoloader->unregister();
 			$yoast_autoloader->register( true );
 		},
-		1
+		1,
 	);
 }
 
@@ -207,8 +205,6 @@ function _wpseo_activate() {
 	require_once WPSEO_PATH . 'inc/wpseo-functions.php';
 	require_once WPSEO_PATH . 'inc/class-wpseo-installation.php';
 
-	wpseo_load_textdomain(); // Make sure we have our translations available for the defaults.
-
 	new WPSEO_Installation();
 
 	WPSEO_Options::get_instance();
@@ -221,10 +217,8 @@ function _wpseo_activate() {
 	WPSEO_Options::ensure_options_exist();
 
 	if ( ! is_multisite() || ! ms_is_switched() ) {
-		if ( WPSEO_Options::get( 'stripcategorybase' ) === true ) {
-			// Constructor has side effects so this registers all hooks.
-			$GLOBALS['wpseo_rewrite'] = new WPSEO_Rewrite();
-		}
+		// Constructor has side effects so this registers all hooks.
+		$GLOBALS['wpseo_rewrite'] = new WPSEO_Rewrite();
 	}
 	add_action( 'shutdown', [ 'WPSEO_Utils', 'clear_rewrites' ] );
 
@@ -308,26 +302,18 @@ function wpseo_on_activate_blog( $blog_id ) {
 
 /* ***************************** PLUGIN LOADING *************************** */
 
+
 /**
  * Load translations.
+ *
+ * @deprecated 27.0
+ * @codeCoverageIgnore
  *
  * @return void
  */
 function wpseo_load_textdomain() {
-	$wpseo_path = str_replace( '\\', '/', WPSEO_PATH );
-	$mu_path    = str_replace( '\\', '/', WPMU_PLUGIN_DIR );
-
-	if ( stripos( $wpseo_path, $mu_path ) !== false ) {
-		load_muplugin_textdomain( 'wordpress-seo', dirname( WPSEO_BASENAME ) . '/languages/' );
-	}
-	else {
-		load_plugin_textdomain( 'wordpress-seo', false, dirname( WPSEO_BASENAME ) . '/languages/' );
-	}
+	_deprecated_function( __FUNCTION__, 'Yoast SEO 27.0' );
 }
-
-add_action( 'plugins_loaded', 'wpseo_load_textdomain' );
-
-
 /**
  * On plugins_loaded: load the minimum amount of essential files for this plugin.
  *
@@ -341,8 +327,22 @@ function wpseo_init() {
 	WPSEO_Options::get_instance();
 	WPSEO_Meta::init();
 
-	if ( version_compare( WPSEO_Options::get( 'version', 1 ), WPSEO_VERSION, '<' ) ) {
-		if ( function_exists( 'opcache_reset' ) ) {
+	if ( version_compare( WPSEO_Options::get( 'version', 1, [ 'wpseo' ] ), WPSEO_VERSION, '<' ) ) {
+		// Invalidate the opcache in 50% of the cases, randomly staggered based on the site URL.
+		// @TODO: Move the staggering logic to its own class, but only after a few releases after the complete sunset of the opcache invalidation. Make sure to document that in the future, maybe `12` should be used as modulus, so that it's easier to tinker the percentage (divisible by 2, 3, 4, 6). (see the technical choices of https://github.com/Yoast/wordpress-seo/pull/22812).
+		$random_seed               = hexdec( substr( hash( 'sha256', site_url() ), 0, 8 ) );
+		$should_invalidate_opcache = ( $random_seed % 2 ) !== 0;
+
+		/**
+		 * Filter: 'Yoast\WP\SEO\should_invalidate_opcache' - Allow developers to enable / disable
+		 * opcache invalidation upon upgrade of the Yoast SEO plugin.
+		 *
+		 * @since 26.1
+		 *
+		 * @param bool $should_invalidate Whether opcache should be invalidated.
+		 */
+		$should_invalidate_opcache = (bool) apply_filters( 'Yoast\WP\SEO\should_invalidate_opcache', $should_invalidate_opcache );
+		if ( $should_invalidate_opcache && function_exists( 'opcache_reset' ) ) {
 			// phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged -- Prevent notices when opcache.restrict_api is set.
 			@opcache_reset();
 		}
@@ -351,11 +351,9 @@ function wpseo_init() {
 		// Get a cleaned up version of the $options.
 	}
 
-	if ( WPSEO_Options::get( 'stripcategorybase' ) === true ) {
-		$GLOBALS['wpseo_rewrite'] = new WPSEO_Rewrite();
-	}
+	$GLOBALS['wpseo_rewrite'] = new WPSEO_Rewrite();
 
-	if ( WPSEO_Options::get( 'enable_xml_sitemap' ) === true ) {
+	if ( WPSEO_Options::get( 'enable_xml_sitemap', null, [ 'wpseo' ] ) === true ) {
 		$GLOBALS['wpseo_sitemaps'] = new WPSEO_Sitemaps();
 	}
 
@@ -563,8 +561,14 @@ function yoast_wpseo_missing_filter_notice() {
  * @return void
  */
 function yoast_wpseo_activation_failed_notice( $message ) {
+	$title = sprintf(
+		/* translators: %s: Yoast SEO. */
+		esc_html__( '%s activation failed', 'wordpress-seo' ),
+		'Yoast SEO',
+	);
+
 	// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- This function is only called in 3 places that are safe.
-	echo '<div class="error"><p>' . esc_html__( 'Activation failed:', 'wordpress-seo' ) . ' ' . strip_tags( $message, '<a>' ) . '</p></div>';
+	echo '<div class="error yoast-migrated-notice"><h4 class="yoast-notice-migrated-header">' . $title . '</h4><div class="notice-yoast-content"><p>' . strip_tags( $message, '<a>' ) . '</p></div></div>';
 }
 
 /**

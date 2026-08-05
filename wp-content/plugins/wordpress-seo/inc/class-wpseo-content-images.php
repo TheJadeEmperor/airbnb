@@ -35,11 +35,11 @@ class WPSEO_Content_Images {
 		}
 
 		$content_images = $this->get_img_tags_from_content( $content );
-		$images         = array_map( [ $this, 'get_img_tag_source' ], $content_images );
-		$images         = array_filter( $images );
-		$images         = array_unique( $images );
-		$images         = array_values( $images ); // Reset the array keys.
 
+		$images = array_map( [ $this, 'get_img_tag_source' ], $content_images );
+		$images = array_filter( $images );
+		$images = array_unique( $images );
+		$images = array_values( $images ); // Reset the array keys.
 		return $images;
 	}
 
@@ -87,9 +87,7 @@ class WPSEO_Content_Images {
 	 * @return string The content of the supplied post.
 	 */
 	private function get_post_content( $post_id, $post ) {
-		if ( $post === null ) {
-			$post = get_post( $post_id );
-		}
+		$post ??= get_post( $post_id );
 
 		if ( $post === null ) {
 			return '';

@@ -1,4 +1,5 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 namespace Yoast\WP\SEO\Editors\Application\Seo;
 
@@ -15,14 +16,14 @@ class Post_Seo_Information_Repository {
 	/**
 	 * The post.
 	 *
-	 * @var WP_Post $post
+	 * @var WP_Post
 	 */
 	private $post;
 
 	/**
 	 * The data providers.
 	 *
-	 * @var Abstract_Post_Seo_Data_Provider $seo_data_providers
+	 * @var Abstract_Post_Seo_Data_Provider
 	 */
 	private $seo_data_providers;
 

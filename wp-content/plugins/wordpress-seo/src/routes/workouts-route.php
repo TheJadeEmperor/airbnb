@@ -34,9 +34,7 @@ class Workouts_Route implements Route_Interface {
 	 *
 	 * @param Options_Helper $options_helper The options helper.
 	 */
-	public function __construct(
-		Options_Helper $options_helper
-	) {
+	public function __construct( Options_Helper $options_helper ) {
 		$this->options_helper = $options_helper;
 	}
 
@@ -83,7 +81,7 @@ class Workouts_Route implements Route_Interface {
 		$workouts_option = \apply_filters( 'Yoast\WP\SEO\workouts_options', $workouts_option );
 
 		return new WP_REST_Response(
-			[ 'json' => $workouts_option ]
+			[ 'json' => $workouts_option ],
 		);
 	}
 
@@ -107,7 +105,7 @@ class Workouts_Route implements Route_Interface {
 		$result = \apply_filters( 'Yoast\WP\SEO\workouts_route_save', null, $workouts_data );
 
 		return new WP_REST_Response(
-			[ 'json' => $result ]
+			[ 'json' => $result ],
 		);
 	}
 

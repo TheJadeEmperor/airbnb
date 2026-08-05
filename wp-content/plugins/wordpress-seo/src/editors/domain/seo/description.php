@@ -1,4 +1,5 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 namespace Yoast\WP\SEO\Editors\Domain\Seo;
 
@@ -10,14 +11,14 @@ class Description implements Seo_Plugin_Data_Interface {
 	/**
 	 * The formatted description date.
 	 *
-	 * @var string $description_date
+	 * @var string
 	 */
 	private $description_date;
 
 	/**
 	 * The description template.
 	 *
-	 * @var string $description_template
+	 * @var string
 	 */
 	private $description_template;
 

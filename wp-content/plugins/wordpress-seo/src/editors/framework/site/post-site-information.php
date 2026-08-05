@@ -1,8 +1,11 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 namespace Yoast\WP\SEO\Editors\Framework\Site;
 
 use Yoast\WP\SEO\Actions\Alert_Dismissal_Action;
+use Yoast\WP\SEO\Alerts\Infrastructure\Default_SEO_Data\Default_SEO_Data_Collector;
+use Yoast\WP\SEO\Helpers\Options_Helper;
 use Yoast\WP\SEO\Helpers\Product_Helper;
 use Yoast\WP\SEO\Helpers\Short_Link_Helper;
 use Yoast\WP\SEO\Introductions\Infrastructure\Wistia_Embed_Permission_Repository;
@@ -17,48 +20,52 @@ class Post_Site_Information extends Base_Site_Information {
 	/**
 	 * The permalink.
 	 *
-	 * @var string $permalink
+	 * @var string
 	 */
 	private $permalink;
 
 	/**
 	 * The alert dismissal action.
 	 *
-	 * @var Alert_Dismissal_Action $alert_dismissal_action
+	 * @var Alert_Dismissal_Action
 	 */
 	private $alert_dismissal_action;
 
 	/**
-	 * The promotion manager.
+	 * The default SEO data collector.
 	 *
-	 * @var Promotion_Manager $promotion_manager
+	 * @var Default_SEO_Data_Collector
 	 */
-	private $promotion_manager;
+	private $default_seo_data_collector;
 
 	/**
 	 * Constructs the class.
 	 *
-	 * @param Promotion_Manager                  $promotion_manager                  The promotion manager.
 	 * @param Short_Link_Helper                  $short_link_helper                  The short link helper.
 	 * @param Wistia_Embed_Permission_Repository $wistia_embed_permission_repository The wistia embed permission
 	 *                                                                               repository.
 	 * @param Meta_Surface                       $meta                               The meta surface.
 	 * @param Product_Helper                     $product_helper                     The product helper.
 	 * @param Alert_Dismissal_Action             $alert_dismissal_action             The alert dismissal action.
+	 * @param Options_Helper                     $options_helper                     The options helper.
+	 * @param Promotion_Manager                  $promotion_manager                  The promotion manager.
+	 * @param Default_SEO_Data_Collector         $default_seo_data_collector         The default SEO data collector.
 	 *
 	 * @return void
 	 */
 	public function __construct(
-		Promotion_Manager $promotion_manager,
 		Short_Link_Helper $short_link_helper,
 		Wistia_Embed_Permission_Repository $wistia_embed_permission_repository,
 		Meta_Surface $meta,
 		Product_Helper $product_helper,
-		Alert_Dismissal_Action $alert_dismissal_action
+		Alert_Dismissal_Action $alert_dismissal_action,
+		Options_Helper $options_helper,
+		Promotion_Manager $promotion_manager,
+		Default_SEO_Data_Collector $default_seo_data_collector
 	) {
-		parent::__construct( $short_link_helper, $wistia_embed_permission_repository, $meta, $product_helper );
-		$this->promotion_manager      = $promotion_manager;
-		$this->alert_dismissal_action = $alert_dismissal_action;
+		parent::__construct( $short_link_helper, $wistia_embed_permission_repository, $meta, $product_helper, $options_helper, $promotion_manager );
+		$this->alert_dismissal_action     = $alert_dismissal_action;
+		$this->default_seo_data_collector = $default_seo_data_collector;
 	}
 
 	/**
@@ -75,21 +82,21 @@ class Post_Site_Information extends Base_Site_Information {
 	/**
 	 * Returns post specific site information together with the generic site information.
 	 *
-	 * @return array<string|string,string[]>
+	 * @return array<string, string|array<string, string>>
 	 */
 	public function get_legacy_site_information(): array {
 		$dismissed_alerts = $this->alert_dismissal_action->all_dismissed();
 
 		$data = [
-			'dismissedAlerts'            => $dismissed_alerts,
-			'currentPromotions'          => $this->promotion_manager->get_current_promotions(),
-			'webinarIntroBlockEditorUrl' => $this->short_link_helper->get( 'https://yoa.st/webinar-intro-block-editor' ),
-			'blackFridayBlockEditorUrl'  => ( $this->promotion_manager->is( 'black-friday-2023-checklist' ) ) ? $this->short_link_helper->get( 'https://yoa.st/black-friday-checklist' ) : '',
-			'metabox'                    => [
+			'dismissedAlerts'              => $dismissed_alerts,
+			'webinarIntroBlockEditorUrl'   => $this->short_link_helper->get( 'https://yoa.st/webinar-intro-block-editor' ),
+			'metabox'                      => [
 				'search_url'    => $this->search_url(),
 				'post_edit_url' => $this->edit_url(),
 				'base_url'      => $this->base_url_for_js(),
 			],
+			'isRecentTitlesDefault'        => \count( $this->default_seo_data_collector->get_posts_with_default_seo_title() ) > 4,
+			'isRecentDescriptionsDefault'  => \count( $this->default_seo_data_collector->get_posts_with_default_seo_description() ) > 4,
 		];
 
 		return \array_merge_recursive( $data, parent::get_legacy_site_information() );
@@ -98,19 +105,19 @@ class Post_Site_Information extends Base_Site_Information {
 	/**
 	 * Returns post specific site information together with the generic site information.
 	 *
-	 * @return array<string|string,string[]>
+	 * @return array<string, string|string[]>
 	 */
 	public function get_site_information(): array {
 		$dismissed_alerts = $this->alert_dismissal_action->all_dismissed();
 
 		$data = [
-			'dismissedAlerts'            => $dismissed_alerts,
-			'currentPromotions'          => $this->promotion_manager->get_current_promotions(),
-			'webinarIntroBlockEditorUrl' => $this->short_link_helper->get( 'https://yoa.st/webinar-intro-block-editor' ),
-			'blackFridayBlockEditorUrl'  => ( $this->promotion_manager->is( 'black-friday-2023-checklist' ) ) ? $this->short_link_helper->get( 'https://yoa.st/black-friday-checklist' ) : '',
-			'search_url'                 => $this->search_url(),
-			'post_edit_url'              => $this->edit_url(),
-			'base_url'                   => $this->base_url_for_js(),
+			'dismissedAlerts'             => $dismissed_alerts,
+			'webinarIntroBlockEditorUrl'  => $this->short_link_helper->get( 'https://yoa.st/webinar-intro-block-editor' ),
+			'search_url'                  => $this->search_url(),
+			'post_edit_url'               => $this->edit_url(),
+			'base_url'                    => $this->base_url_for_js(),
+			'isRecentTitlesDefault'       => \count( $this->default_seo_data_collector->get_posts_with_default_seo_title() ) > 4,
+			'isRecentDescriptionsDefault' => \count( $this->default_seo_data_collector->get_posts_with_default_seo_description() ) > 4,
 		];
 
 		return \array_merge( $data, parent::get_site_information() );

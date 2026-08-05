@@ -50,7 +50,7 @@ class WPSEO_Sitemaps_Cache_Validator {
 	public static function get_storage_key( $type = null, $page = 1 ) {
 
 		// Using SITEMAP_INDEX_TYPE for sitemap index cache.
-		$type = is_null( $type ) ? WPSEO_Sitemaps::SITEMAP_INDEX_TYPE : $type;
+		$type = ( $type === null ) ? WPSEO_Sitemaps::SITEMAP_INDEX_TYPE : $type;
 
 		$global_cache_validator = self::get_validator();
 		$type_cache_validator   = self::get_validator( $type );
@@ -110,8 +110,8 @@ class WPSEO_Sitemaps_Cache_Validator {
 				throw new OutOfRangeException(
 					__(
 						'Trying to build the sitemap cache key, but the postfix and prefix combination leaves too little room to do this. You are probably requesting a page that is way out of the expected range.',
-						'wordpress-seo'
-					)
+						'wordpress-seo',
+					),
 				);
 			}
 
@@ -141,7 +141,7 @@ class WPSEO_Sitemaps_Cache_Validator {
 		$old_validator = null;
 
 		// Get the current type validator.
-		if ( ! is_null( $type ) ) {
+		if ( $type !== null ) {
 			$old_validator = self::get_validator( $type );
 		}
 
@@ -170,7 +170,7 @@ class WPSEO_Sitemaps_Cache_Validator {
 
 		global $wpdb;
 
-		if ( is_null( $type ) ) {
+		if ( $type === null ) {
 			// Clear all cache if no type is provided.
 			$like = sprintf( '%s%%', self::STORAGE_KEY_PREFIX );
 		}
@@ -195,8 +195,8 @@ class WPSEO_Sitemaps_Cache_Validator {
 			$wpdb->prepare(
 			//phpcs:disable WordPress.DB.PreparedSQLPlaceholders -- %i placeholder is still not recognized.
 				'DELETE FROM %i WHERE ' . implode( ' OR ', array_fill( 0, count( $where ), '%s' ) ),
-				array_merge( [ $wpdb->options ], $where )
-			)
+				array_merge( [ $wpdb->options ], $where ),
+			),
 		);
 
 		wp_cache_delete( 'alloptions', 'options' );
@@ -221,7 +221,7 @@ class WPSEO_Sitemaps_Cache_Validator {
 		$key = self::get_validator_key( $type );
 
 		$current = get_option( $key, null );
-		if ( ! is_null( $current ) ) {
+		if ( $current !== null ) {
 			return $current;
 		}
 

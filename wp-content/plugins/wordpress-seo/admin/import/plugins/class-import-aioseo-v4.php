@@ -62,9 +62,9 @@ class WPSEO_Import_AIOSEO_V4 extends WPSEO_Plugin_Importer {
 	/**
 	 * Mapping between the AiOSEO replace vars and the Yoast replace vars.
 	 *
-	 * @var array
-	 *
 	 * @see https://yoast.com/help/list-available-snippet-variables-yoast-seo/
+	 *
+	 * @var array
 	 */
 	protected $replace_vars = [
 		// They key is the AiOSEO replace var, the value is the Yoast replace var (see class-wpseo-replace-vars).
@@ -112,8 +112,8 @@ class WPSEO_Import_AIOSEO_V4 extends WPSEO_Plugin_Importer {
 				$wpdb->prepare(
 					'UPDATE tmp_meta_table SET meta_value = REPLACE( meta_value, %s, %s )',
 					$aioseo_variable,
-					$yoast_variable
-				)
+					$yoast_variable,
+				),
 			);
 		}
 
@@ -149,7 +149,7 @@ class WPSEO_Import_AIOSEO_V4 extends WPSEO_Plugin_Importer {
 			preg_match_all(
 				"/#$aioseo_prefix-([\w-]+)/",
 				$meta_value,
-				$matches
+				$matches,
 			);
 
 			/*
@@ -189,8 +189,8 @@ class WPSEO_Import_AIOSEO_V4 extends WPSEO_Plugin_Importer {
 				$wpdb->prepare(
 					'UPDATE tmp_meta_table SET meta_value = REPLACE( meta_value, %s, %s )',
 					$aioseo_variable,
-					$yoast_variable
-				)
+					$yoast_variable,
+				),
 			);
 		}
 	}
@@ -211,8 +211,8 @@ class WPSEO_Import_AIOSEO_V4 extends WPSEO_Plugin_Importer {
 		return $wpdb->get_col(
 			$wpdb->prepare(
 				'SELECT meta_value FROM tmp_meta_table WHERE meta_value LIKE %s',
-				"%#$aioseo_prefix-%"
-			)
+				"%#$aioseo_prefix-%",
+			),
 		);
 	}
 

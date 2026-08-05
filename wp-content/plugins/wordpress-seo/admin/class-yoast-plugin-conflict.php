@@ -52,7 +52,7 @@ class Yoast_Plugin_Conflict {
 	 */
 	public static function get_instance( $class_name = '' ) {
 
-		if ( is_null( self::$instance ) ) {
+		if ( self::$instance === null ) {
 			if ( ! is_string( $class_name ) || $class_name === '' ) {
 				$class_name = self::class;
 			}
@@ -102,9 +102,7 @@ class Yoast_Plugin_Conflict {
 			return false;
 		}
 
-		if ( $sections_checked === null ) {
-			$sections_checked = [];
-		}
+		$sections_checked ??= [];
 
 		if ( ! in_array( $plugin_section, $sections_checked, true ) ) {
 			$sections_checked[] = $plugin_section;
@@ -194,8 +192,8 @@ class Yoast_Plugin_Conflict {
 					[
 						'type' => Yoast_Notification::ERROR,
 						'id'   => 'wpseo-conflict-' . $identifier,
-					]
-				)
+					],
+				),
 			);
 		}
 	}

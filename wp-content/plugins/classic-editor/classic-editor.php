@@ -5,7 +5,7 @@
  * Plugin Name: Classic Editor
  * Plugin URI:  https://wordpress.org/plugins/classic-editor/
  * Description: Enables the WordPress classic editor and the old-style Edit Post screen with TinyMCE, Meta Boxes, etc. Supports the older plugins that extend this screen.
- * Version:     1.6.4
+ * Version:     1.7.0
  * Author:      WordPress Contributors
  * Author URI:  https://github.com/WordPress/classic-editor/
  * License:     GPLv2 or later
@@ -25,6 +25,10 @@
 
 if ( ! defined( 'ABSPATH' ) ) {
 	die( 'Invalid request.' );
+}
+
+if ( ! defined( 'CLASSIC_EDITOR_VERSION' ) ) {
+	define( 'CLASSIC_EDITOR_VERSION', '1.7.0' );
 }
 
 if ( ! class_exists( 'Classic_Editor' ) ) :
@@ -65,6 +69,20 @@ class Classic_Editor {
 
 		// Always remove the "Try Gutenberg" dashboard widget. See https://core.trac.wordpress.org/ticket/44635.
 		remove_action( 'try_gutenberg_panel', 'wp_try_gutenberg_panel' );
+
+		// Fix for Safari 18 negative horizontal margin on floats.
+		add_action( 'admin_print_styles', array( __CLASS__, 'safari_18_temp_fix' ) );
+
+		// Fix for the Categories postbox on the classic Edit Post screen for WP 6.7.1.
+		global $wp_version;
+
+		if ( '6.7.1' === $wp_version && is_admin() ) {
+			add_filter( 'script_loader_src', array( __CLASS__, 'replace_post_js_2' ), 11, 2 );
+		}
+
+        if ( version_compare( $wp_version, '7.0', '>=' ) ) {
+            add_action( 'admin_print_styles', array( __CLASS__, 'print_70_publishing_actions_hotfix' ) );
+        }
 
 		if ( ! $block_editor && ! $gutenberg  ) {
 			return;
@@ -456,7 +474,7 @@ class Classic_Editor {
 		if ( ! $user_can_edit || ! $settings['allow-users'] ) {
 			return;
 		}
-		
+
 		if ( $user instanceof WP_User ) {
 			$user_id = (int) $user->ID;
 		} else {
@@ -699,7 +717,7 @@ class Classic_Editor {
 			'classic-editor-plugin',
 			plugins_url( 'js/block-editor-plugin.js', __FILE__ ),
 			array( 'wp-element', 'wp-components', 'lodash' ),
-			'1.4',
+			CLASSIC_EDITOR_VERSION,
 			true
 		);
 
@@ -974,6 +992,71 @@ class Classic_Editor {
 		delete_option( 'classic-editor-replace' );
 		delete_option( 'classic-editor-allow-users' );
 	}
+
+	/**
+	 * Temporary fix for Safari 18 negative horizontal margin on floats.
+	 * See: https://core.trac.wordpress.org/ticket/62082 and
+	 * https://bugs.webkit.org/show_bug.cgi?id=280063.
+	 * TODO: Remove when Safari is fixed.
+	 */
+	public static function safari_18_temp_fix() {
+		global $current_screen;
+
+		if ( isset( $current_screen->base ) && 'post' === $current_screen->base ) {
+			$clear = is_rtl() ? 'right' : 'left';
+
+			?>
+			<style id="classic-editor-safari-18-temp-fix">
+			_::-webkit-full-page-media, _:future, :root #post-body #postbox-container-2 {
+				clear: <?php echo $clear; ?>;
+			}
+			</style>
+			<?php
+		}
+	}
+
+	// Back-compat with 1.6.6.
+	public static function replace_post_js( $scripts ) {
+		_deprecated_function( __METHOD__, '1.6.7' );
+	}
+
+	/**
+	 * Fix for the Categories postbox on the classic Edit Post screen for WP 6.7.1.
+	 * See: https://core.trac.wordpress.org/ticket/62504 and 
+	 * https://github.com/WordPress/classic-editor/issues/222.
+	 */
+	public static function replace_post_js_2( $src, $handle ) {
+		if ( 'post' === $handle && is_string( $src ) && false === strpos( $src, 'ver=62504-20241121' ) ) {
+			$suffix = wp_scripts_get_suffix();
+			$src    = plugins_url( 'scripts/', __FILE__ ) . "post{$suffix}.js";
+			$src    = add_query_arg( 'ver', '62504-20241121', $src );
+		}
+
+		return $src;
+	}
+
+    /**
+     * Enqueues styles to address crowded buttons in WordPress 7.0.
+     *
+     * 7.0 applied a fresh coat of paint to the admin area of WordPress. An unintended side effect was that
+     * buttons are crowded within the Publish meta box.
+     *
+     * See https://core.trac.wordpress.org/ticket/65286.
+     */
+    public static function print_70_publishing_actions_hotfix() {
+        global $hook_suffix;
+
+        if ( ! in_array( $hook_suffix, array( 'post.php', 'post-new.php' ) ) ) {
+            return;
+        }
+        ?>
+        <style>
+            #major-publishing-actions {
+                flex-wrap: wrap;
+            }
+        </style>
+        <?php
+    }
 }
 
 add_action( 'plugins_loaded', array( 'Classic_Editor', 'init_actions' ) );

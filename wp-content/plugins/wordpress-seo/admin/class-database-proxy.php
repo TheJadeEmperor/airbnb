@@ -83,7 +83,7 @@ class WPSEO_Database_Proxy {
 	 * @param array             $data   Data to insert.
 	 * @param array|string|null $format Formats for the data.
 	 *
-	 * @return false|int Total amount of inserted rows or false on error.
+	 * @return int|false Total amount of inserted rows or false on error.
 	 */
 	public function insert( array $data, $format = null ) {
 		$this->pre_execution();
@@ -103,7 +103,7 @@ class WPSEO_Database_Proxy {
 	 * @param array|string|null $format       Optional. Data prepare format.
 	 * @param array|string|null $where_format Optional. Where prepare format.
 	 *
-	 * @return false|int False when the update request is invalid, int on number of rows changed.
+	 * @return int|false False when the update request is invalid, int on number of rows changed.
 	 */
 	public function update( array $data, array $where, $format = null, $where_format = null ) {
 		$this->pre_execution();
@@ -125,7 +125,7 @@ class WPSEO_Database_Proxy {
 	 * @param array|string|null $format       Optional. Data prepare format.
 	 * @param array|string|null $where_format Optional. Where prepare format.
 	 *
-	 * @return false|int False when the upsert request is invalid, int on number of rows changed.
+	 * @return int|false False when the upsert request is invalid, int on number of rows changed.
 	 */
 	public function upsert( array $data, ?array $where = null, $format = null, $where_format = null ) {
 		if ( $where_format !== null ) {
@@ -147,14 +147,14 @@ class WPSEO_Database_Proxy {
 			$this->get_table_name(),
 			implode( ', ', $keys ),
 			implode( ', ', array_fill( 0, count( $data ), '%s' ) ),
-			implode( ', ', $update )
+			implode( ', ', $update ),
 		);
 
 		$result = $this->database->query(
 			$this->database->prepare(
 				$query,
-				array_values( $data )
-			)
+				array_values( $data ),
+			),
 		);
 
 		$this->post_execution();
@@ -168,7 +168,7 @@ class WPSEO_Database_Proxy {
 	 * @param array             $where  Where clauses for the query.
 	 * @param array|string|null $format Formats for the data.
 	 *
-	 * @return false|int
+	 * @return int|false
 	 */
 	public function delete( array $where, $format = null ) {
 		$this->pre_execution();
@@ -210,7 +210,7 @@ class WPSEO_Database_Proxy {
 			'CREATE TABLE IF NOT EXISTS %1$s ( %2$s ) %3$s',
 			$this->get_table_name(),
 			implode( ',', array_merge( $columns, $indexes ) ),
-			$this->database->get_charset_collate()
+			$this->database->get_charset_collate(),
 		);
 
 		$this->pre_execution();

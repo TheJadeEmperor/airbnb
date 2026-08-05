@@ -151,7 +151,7 @@ class First_Time_Configuration_Action {
 			static function ( $key ) {
 				return $key !== 'user_id';
 			},
-			\ARRAY_FILTER_USE_KEY
+			\ARRAY_FILTER_USE_KEY,
 		);
 
 		$failures = $this->social_profiles_helper->set_person_social_profiles( $params['user_id'], $social_profiles );
@@ -299,7 +299,7 @@ class First_Time_Configuration_Action {
 	public function get_configuration_state() {
 		$configuration_option = $this->options_helper->get( 'configuration_finished_steps' );
 
-		if ( ! \is_null( $configuration_option ) ) {
+		if ( $configuration_option !== null ) {
 			return (object) [
 				'success' => true,
 				'status'  => 200,

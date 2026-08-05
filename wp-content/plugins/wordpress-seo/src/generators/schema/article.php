@@ -20,11 +20,6 @@ class Article extends Abstract_Schema_Piece {
 			return false;
 		}
 
-		// If we cannot output a publisher, we shouldn't output an Article.
-		if ( $this->context->site_represents === false ) {
-			return false;
-		}
-
 		// If we cannot output an author, we shouldn't output an Article.
 		if ( ! $this->helpers->schema->article->is_author_supported( $this->context->indexable->object_sub_type ) ) {
 			return false;
@@ -55,10 +50,14 @@ class Article extends Abstract_Schema_Piece {
 			],
 			'headline'         => $this->helpers->schema->html->smart_strip_tags( $this->helpers->post->get_post_title_with_fallback( $this->context->id ) ),
 			'datePublished'    => $this->helpers->date->format( $this->context->post->post_date_gmt ),
-			'dateModified'     => $this->helpers->date->format( $this->context->post->post_modified_gmt ),
-			'mainEntityOfPage' => [ '@id' => $this->context->main_schema_id ],
-			'wordCount'        => $this->word_count( $this->context->post->post_content, $this->context->post->post_title ),
 		];
+
+		if ( \strtotime( $this->context->post->post_modified_gmt ) > \strtotime( $this->context->post->post_date_gmt ) ) {
+			$data['dateModified'] = $this->helpers->date->format( $this->context->post->post_modified_gmt );
+		}
+
+		$data['mainEntityOfPage'] = [ '@id' => $this->context->main_schema_id ];
+		$data['wordCount']        = $this->word_count( $this->context->post->post_content, $this->context->post->post_title );
 
 		if ( $this->context->post->comment_status === 'open' ) {
 			$data['commentCount'] = \intval( $this->context->post->comment_count, 10 );

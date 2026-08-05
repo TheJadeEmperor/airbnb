@@ -1,4 +1,5 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 // phpcs:disable Yoast.NamingConventions.NamespaceName.MaxExceeded
 namespace Yoast\WP\SEO\Editors\Framework\Seo\Terms;
@@ -6,6 +7,7 @@ namespace Yoast\WP\SEO\Editors\Framework\Seo\Terms;
 use Yoast\WP\SEO\Editors\Domain\Seo\Description;
 use Yoast\WP\SEO\Editors\Domain\Seo\Seo_Plugin_Data_Interface;
 use Yoast\WP\SEO\Editors\Framework\Seo\Description_Data_Provider_Interface;
+
 /**
  * Describes if the description SEO data.
  */

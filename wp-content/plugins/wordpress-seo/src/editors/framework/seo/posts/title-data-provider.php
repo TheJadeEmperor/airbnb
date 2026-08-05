@@ -1,4 +1,5 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 // phpcs:disable Yoast.NamingConventions.NamespaceName.MaxExceeded
 namespace Yoast\WP\SEO\Editors\Framework\Seo\Posts;
@@ -16,7 +17,7 @@ class Title_Data_Provider extends Abstract_Post_Seo_Data_Provider implements Tit
 	/**
 	 * The options helper.
 	 *
-	 * @var Options_Helper $options_helper
+	 * @var Options_Helper
 	 */
 	private $options_helper;
 

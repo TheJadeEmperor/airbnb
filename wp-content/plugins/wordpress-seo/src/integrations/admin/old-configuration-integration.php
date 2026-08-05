@@ -34,12 +34,12 @@ class Old_Configuration_Integration implements Integration_Interface {
 	 */
 	public function add_submenu_page( $submenu_pages ) {
 		\add_submenu_page(
-			'',
+			'options.php',
 			\__( 'Old Configuration Wizard', 'wordpress-seo' ),
 			'',
 			'manage_options',
 			'wpseo_configurator',
-			[ $this, 'render_page' ]
+			[ $this, 'render_page' ],
 		);
 
 		return $submenu_pages;
@@ -64,7 +64,8 @@ class Old_Configuration_Integration implements Integration_Interface {
 		if ( ! isset( $_GET['page'] ) || $_GET['page'] !== 'wpseo_configurator' ) {
 			return;
 		}
-		\wp_safe_redirect( \admin_url( 'admin.php?page=wpseo_dashboard#top#first-time-configuration' ), 302, 'Yoast SEO' );
-		exit;
+		$redirect_url = 'admin.php?page=wpseo_dashboard#/first-time-configuration';
+		\wp_safe_redirect( \admin_url( $redirect_url ), 302, 'Yoast SEO' );
+		exit();
 	}
 }

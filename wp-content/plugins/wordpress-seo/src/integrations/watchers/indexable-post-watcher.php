@@ -300,7 +300,7 @@ class Indexable_Post_Watcher implements Integration_Interface {
 		/**
 		 * The related indexables.
 		 *
-		 * @var Indexable[] $related_indexables .
+		 * @var Indexable[] $related_indexables
 		 */
 		$related_indexables   = [];
 		$related_indexables[] = $this->repository->find_by_id_and_type( $post->post_author, 'user', false );
@@ -321,7 +321,7 @@ class Indexable_Post_Watcher implements Integration_Interface {
 		}
 		$related_indexables = \array_merge(
 			$related_indexables,
-			$this->repository->find_by_multiple_ids_and_type( $term_ids, 'term', false )
+			$this->repository->find_by_multiple_ids_and_type( $term_ids, 'term', false ),
 		);
 
 		return \array_filter( $related_indexables );

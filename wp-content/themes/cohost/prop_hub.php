@@ -4,10 +4,10 @@
 // LBS
 // ============================================================
 
-// --- DB credentials for the pm_prop_hub table ---
-// NOTE: the SQL dump for pm_prop_hub is under database `rentals`,
-// not `props` (where onboarding_tasks lives). Adjust DB_NAME below
-// if your local WAMP setup differs.
+// --- DB credentials for the pm_* tables ---
+// NOTE: the SQL dumps for pm_prop_hub / pm_cleaners / pm_contractors are
+// all under database `rentals`, not `props` (where onboarding_tasks
+// lives). Adjust DB_NAME below if your local WAMP setup differs.
 function lbs_prop_hub_db() {
     static $pdo = null;
     if ($pdo === null) {
@@ -53,10 +53,10 @@ function lbs_prop_status_options() {
     ];
 }
 
-// --- Column definitions, in display order ---
+// --- Column definitions: pm_prop_hub, in display order ---
 // type: 'num' | 'status' | 'title' | 'text' | 'link'
-// 'key' is the pm_prop_hub field this column reads from. The same key
-// can appear more than once (e.g. Property is repeated at the end).
+// 'key' is the db field this column reads from. The same key can appear
+// more than once (e.g. Property is repeated at the end).
 function lbs_prop_hub_columns() {
     return [
         ['key' => 'num',       'label' => '#',                'type' => 'num'],
@@ -83,35 +83,46 @@ function lbs_prop_hub_columns() {
     ];
 }
 
-// --- Render a single cell based on its property type ---
-function lbs_render_prop_cell($row, $col) {
+// --- Column definitions: pm_cleaners, in display order ---
+function lbs_cleaners_columns() {
+    return [
+        ['key' => 'id',        'label' => 'ID',          'type' => 'num'],
+        ['key' => 'name',      'label' => 'Cleaner',     'type' => 'title'],
+        ['key' => 'prop_id',   'label' => 'Property #',  'type' => 'num'],
+        ['key' => 'role',      'label' => 'Role',        'type' => 'text'],
+        ['key' => 'manager',   'label' => 'Manager',     'type' => 'text'],
+        ['key' => 'staff',     'label' => 'Staff',       'type' => 'text'],
+        ['key' => 'scheduler', 'label' => 'Scheduler',   'type' => 'text'],
+        ['key' => 'chat',      'label' => 'Chat',        'type' => 'text'],
+        ['key' => 'turnover',  'label' => 'Turnover',    'type' => 'text'],
+        ['key' => 'close',     'label' => 'Close CRM',   'type' => 'link', 'chip' => 'CRM'],
+        ['key' => 'photos',    'label' => 'Photos',      'type' => 'link', 'chip' => 'Folder'],
+    ];
+}
+
+// --- Column definitions: pm_contractors, in display order ---
+function lbs_contractors_columns() {
+    return [
+        ['key' => 'id',      'label' => 'ID',        'type' => 'num'],
+        ['key' => 'name',    'label' => 'Contractor','type' => 'title'],
+        ['key' => 'title',   'label' => 'Trade',     'type' => 'text'],
+        ['key' => 'prop_id', 'label' => 'Property #','type' => 'num'],
+        ['key' => 'phone',   'label' => 'Phone',     'type' => 'text'],
+        ['key' => 'address', 'label' => 'Address',   'type' => 'text'],
+        ['key' => 'payment', 'label' => 'Payment',   'type' => 'text'],
+        ['key' => 'note',    'label' => 'Note',      'type' => 'text'],
+        ['key' => 'close',   'label' => 'Close CRM', 'type' => 'link', 'chip' => 'CRM'],
+    ];
+}
+
+// --- Render a cell for num / title / text / link types (shared by all tables) ---
+function lbs_render_generic_cell($row, $col) {
     $key = $col['key'];
     $value = isset($row[$key]) ? $row[$key] : null;
     $value = is_string($value) ? trim($value) : $value;
 
-    if ($col['type'] === 'status') {
-        $options = lbs_prop_status_options();
-        $current = isset($options[(int) $value]) ? (int) $value : 0;
-        $opt = $options[$current];
-        echo '<td class="ph-cell ph-status-cell">';
-        echo '<div class="ph-status-wrap" data-num="' . esc_attr($row['num']) . '">';
-        echo '<button type="button" class="ph-pill ph-status-trigger" data-status="' . $current . '" '
-            . 'style="background:' . esc_attr($opt['bg']) . ';color:' . esc_attr($opt['fg']) . ';">'
-            . '<span class="ph-dot" style="background:' . esc_attr($opt['dot']) . ';"></span>'
-            . esc_html($opt['label']) . '</button>';
-        echo '<div class="ph-status-menu">';
-        foreach ($options as $val => $o) {
-            $selected = $val === $current ? ' ph-status-selected' : '';
-            echo '<div class="ph-status-option' . $selected . '" data-status="' . $val . '" '
-                . 'data-bg="' . esc_attr($o['bg']) . '" data-fg="' . esc_attr($o['fg']) . '" data-dot="' . esc_attr($o['dot']) . '">'
-                . '<span class="ph-status-option-pill" style="background:' . esc_attr($o['bg']) . ';color:' . esc_attr($o['fg']) . ';">'
-                . '<span class="ph-dot" style="background:' . esc_attr($o['dot']) . ';"></span>' . esc_html($o['label']) . '</span>'
-                . '<span class="ph-status-check">&#10003;</span>'
-                . '</div>';
-        }
-        echo '</div>'; // .ph-status-menu
-        echo '</div>'; // .ph-status-wrap
-        echo '</td>';
+    if ($col['type'] === 'num') {
+        echo '<td class="ph-cell ph-num">' . esc_html($value) . '</td>';
         return;
     }
 
@@ -121,10 +132,6 @@ function lbs_render_prop_cell($row, $col) {
     }
 
     switch ($col['type']) {
-        case 'num':
-            echo '<td class="ph-cell ph-num">' . esc_html($value) . '</td>';
-            break;
-
         case 'title':
             echo '<td class="ph-cell ph-title"><span class="ph-title-icon">▤</span>' . esc_html($value) . '</td>';
             break;
@@ -147,74 +154,126 @@ function lbs_render_prop_cell($row, $col) {
     }
 }
 
+// --- Render a cell for the pm_prop_hub table (adds the status dropdown) ---
+function lbs_render_prop_cell($row, $col) {
+    if ($col['type'] !== 'status') {
+        lbs_render_generic_cell($row, $col);
+        return;
+    }
+
+    $value = isset($row['status']) ? $row['status'] : null;
+    $options = lbs_prop_status_options();
+    $current = isset($options[(int) $value]) ? (int) $value : 0;
+    $opt = $options[$current];
+
+    echo '<td class="ph-cell ph-status-cell">';
+    echo '<div class="ph-status-wrap" data-num="' . esc_attr($row['num']) . '">';
+    echo '<button type="button" class="ph-pill ph-status-trigger" data-status="' . $current . '" '
+        . 'style="background:' . esc_attr($opt['bg']) . ';color:' . esc_attr($opt['fg']) . ';">'
+        . '<span class="ph-dot" style="background:' . esc_attr($opt['dot']) . ';"></span>'
+        . esc_html($opt['label']) . '</button>';
+    echo '<div class="ph-status-menu">';
+    foreach ($options as $val => $o) {
+        $selected = $val === $current ? ' ph-status-selected' : '';
+        echo '<div class="ph-status-option' . $selected . '" data-status="' . $val . '" '
+            . 'data-bg="' . esc_attr($o['bg']) . '" data-fg="' . esc_attr($o['fg']) . '" data-dot="' . esc_attr($o['dot']) . '">'
+            . '<span class="ph-status-option-pill" style="background:' . esc_attr($o['bg']) . ';color:' . esc_attr($o['fg']) . ';">'
+            . '<span class="ph-dot" style="background:' . esc_attr($o['dot']) . ';"></span>' . esc_html($o['label']) . '</span>'
+            . '<span class="ph-status-check">&#10003;</span>'
+            . '</div>';
+    }
+    echo '</div>'; // .ph-status-menu
+    echo '</div>'; // .ph-status-wrap
+    echo '</td>';
+}
+
+// --- Fetch all rows + columns for a pm_* table ---
+function lbs_fetch_table_rows($sqlTable, $columns, $orderBy) {
+    $selectFields = array_unique(array_column($columns, 'key'));
+    if (!in_array($orderBy, $selectFields, true)) {
+        $selectFields[] = $orderBy;
+    }
+
+    try {
+        $pdo = lbs_prop_hub_db();
+        $stmt = $pdo->query(
+            'SELECT ' . implode(', ', $selectFields) . '
+             FROM ' . $sqlTable . '
+             ORDER BY ' . $orderBy
+        );
+        return ['rows' => $stmt->fetchAll(), 'error' => null];
+    } catch (PDOException $e) {
+        return ['rows' => [], 'error' => $e->getMessage()];
+    }
+}
+
+// --- Render one Notion-style table section (heading + table + count) ---
+function lbs_render_table_section($heading, $sourceTable, $rows, $columns, $dbError, $cellCallback) {
+    ?>
+    <h2 class="ph-section-title"><?= esc_html($heading) ?></h2>
+    <p class="ph-subtitle">Pulled live from <code><?= esc_html($sourceTable) ?></code>.</p>
+
+    <?php if ($dbError): ?>
+        <div class="notice notice-error"><p>Could not load <?= esc_html($heading) ?>: <?= esc_html($dbError) ?></p></div>
+    <?php elseif (empty($rows)): ?>
+        <div class="ph-empty-state">No <?= esc_html(strtolower($heading)) ?> yet.</div>
+    <?php else: ?>
+        <div class="ph-table-shell">
+            <div class="ph-table-scroll">
+                <table class="ph-table">
+                    <thead>
+                        <tr>
+                            <?php foreach ($columns as $col): ?>
+                                <th class="ph-th"><?= esc_html($col['label']) ?></th>
+                            <?php endforeach; ?>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rows as $row): ?>
+                            <tr class="ph-row">
+                                <?php foreach ($columns as $col): ?>
+                                    <?php call_user_func($cellCallback, $row, $col); ?>
+                                <?php endforeach; ?>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="ph-count"><?= count($rows) ?> <?= count($rows) === 1 ? 'row' : 'rows' ?></div>
+    <?php endif;
+}
+
 // --- Main page render callback ---
 function lbs_render_prop_hub_page() {
     if (!current_user_can('manage_options')) {
         return;
     }
 
-    $columns = lbs_prop_hub_columns();
-    $selectFields = array_unique(array_column($columns, 'key'));
-    // Always make sure num is present for the status dropdown's data-num.
-    if (!in_array('num', $selectFields, true)) {
-        $selectFields[] = 'num';
-    }
+    $propColumns = lbs_prop_hub_columns();
+    $propData = lbs_fetch_table_rows('pm_prop_hub', $propColumns, 'num');
 
-    $rows = [];
-    $dbError = null;
+    $cleanerColumns = lbs_cleaners_columns();
+    $cleanerData = lbs_fetch_table_rows('pm_cleaners', $cleanerColumns, 'id');
 
-    try {
-        $pdo = lbs_prop_hub_db();
-        $stmt = $pdo->query(
-            'SELECT ' . implode(', ', $selectFields) . '
-             FROM pm_prop_hub
-             ORDER BY num'
-        );
-        $rows = $stmt->fetchAll();
-    } catch (PDOException $e) {
-        $dbError = $e->getMessage();
-    }
+    $contractorColumns = lbs_contractors_columns();
+    $contractorData = lbs_fetch_table_rows('pm_contractors', $contractorColumns, 'id');
 
     $nonce = wp_create_nonce('lbs_prop_hub_status');
     $ajaxUrl = admin_url('admin-ajax.php');
     ?>
     <div class="wrap ph-wrap">
         <h1>Property Hub</h1>
-        <p class="ph-subtitle">All properties, pulled live from <code>pm_prop_hub</code>.</p>
 
         <div class="ph-quicklinks">
             <a class="button" href="<?= esc_url(admin_url('admin.php?page=lbs-onboarding')) ?>">Onboarding checklist</a>
         </div>
 
-        <?php if ($dbError): ?>
-            <div class="notice notice-error"><p>Could not load properties: <?= esc_html($dbError) ?></p></div>
-        <?php elseif (empty($rows)): ?>
-            <div class="ph-empty-state">No properties yet.</div>
-        <?php else: ?>
-            <div class="ph-table-shell">
-                <div class="ph-table-scroll">
-                    <table class="ph-table">
-                        <thead>
-                            <tr>
-                                <?php foreach ($columns as $col): ?>
-                                    <th class="ph-th"><?= esc_html($col['label']) ?></th>
-                                <?php endforeach; ?>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($rows as $row): ?>
-                                <tr class="ph-row">
-                                    <?php foreach ($columns as $col): ?>
-                                        <?php lbs_render_prop_cell($row, $col); ?>
-                                    <?php endforeach; ?>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-            <div class="ph-count"><?= count($rows) ?> <?= count($rows) === 1 ? 'property' : 'properties' ?></div>
-        <?php endif; ?>
+        <?php
+        lbs_render_table_section('Properties', 'pm_prop_hub', $propData['rows'], $propColumns, $propData['error'], 'lbs_render_prop_cell');
+        lbs_render_table_section('Cleaners', 'pm_cleaners', $cleanerData['rows'], $cleanerColumns, $cleanerData['error'], 'lbs_render_generic_cell');
+        lbs_render_table_section('Contractors', 'pm_contractors', $contractorData['rows'], $contractorColumns, $contractorData['error'], 'lbs_render_generic_cell');
+        ?>
     </div>
 
     <style>
@@ -222,10 +281,18 @@ function lbs_render_prop_hub_page() {
             font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
             color: #37352F;
         }
+        .ph-section-title {
+            margin-top: 44px;
+            margin-bottom: 2px;
+            font-size: 19px;
+        }
+        .ph-wrap > .ph-section-title:first-of-type {
+            margin-top: 30px;
+        }
         .ph-subtitle {
             color: #9B9A97;
             font-size: 13px;
-            margin-top: -6px;
+            margin-top: 0;
             margin-bottom: 18px;
         }
         .ph-subtitle code {
@@ -236,7 +303,7 @@ function lbs_render_prop_hub_page() {
             font-size: 12px;
         }
         .ph-quicklinks {
-            margin-bottom: 22px;
+            margin-bottom: 10px;
         }
         .ph-empty-state {
             color: #9B9A97;

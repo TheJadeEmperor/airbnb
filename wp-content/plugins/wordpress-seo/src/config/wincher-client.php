@@ -42,11 +42,7 @@ class Wincher_Client extends OAuth_Client {
 	 *
 	 * @throws Empty_Property_Exception Exception thrown if a token property is empty.
 	 */
-	public function __construct(
-		Options_Helper $options_helper,
-		WP_Remote_Handler $wp_remote_handler
-	) {
-
+	public function __construct( Options_Helper $options_helper, WP_Remote_Handler $wp_remote_handler ) {
 		$provider = new Wincher_PKCE_Provider(
 			[
 				'clientId'                => 'yoast',
@@ -60,13 +56,13 @@ class Wincher_Client extends OAuth_Client {
 			],
 			[
 				'httpClient' => new Client( [ 'handler' => $wp_remote_handler ] ),
-			]
+			],
 		);
 
 		parent::__construct(
 			self::TOKEN_OPTION,
 			$provider,
-			$options_helper
+			$options_helper,
 		);
 	}
 
@@ -81,7 +77,7 @@ class Wincher_Client extends OAuth_Client {
 		$url = $this->provider->getAuthorizationUrl(
 			[
 				'state' => WPSEO_Utils::format_json_encode( [ 'domain' => $parsed_site_url['host'] ] ),
-			]
+			],
 		);
 
 		$pkce_code = $this->provider->getPkceCode();

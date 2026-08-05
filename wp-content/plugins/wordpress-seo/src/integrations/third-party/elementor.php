@@ -2,11 +2,11 @@
 
 namespace Yoast\WP\SEO\Integrations\Third_Party;
 
+use Elementor\Plugin;
 use WP_Post;
 use WP_Screen;
 use WPSEO_Admin_Asset_Manager;
 use WPSEO_Admin_Recommended_Replace_Vars;
-use WPSEO_Language_Utils;
 use WPSEO_Meta;
 use WPSEO_Metabox_Analysis_Inclusive_Language;
 use WPSEO_Metabox_Analysis_Readability;
@@ -14,10 +14,8 @@ use WPSEO_Metabox_Analysis_SEO;
 use WPSEO_Metabox_Formatter;
 use WPSEO_Post_Metabox_Formatter;
 use WPSEO_Replace_Vars;
-use WPSEO_Shortlinker;
 use WPSEO_Utils;
 use Yoast\WP\SEO\Conditionals\Third_Party\Elementor_Edit_Conditional;
-use Yoast\WP\SEO\Conditionals\WooCommerce_Conditional;
 use Yoast\WP\SEO\Editors\Application\Site\Website_Information_Repository;
 use Yoast\WP\SEO\Elementor\Infrastructure\Request_Post;
 use Yoast\WP\SEO\Helpers\Capability_Helper;
@@ -169,6 +167,8 @@ class Elementor implements Integration_Interface {
 		}
 
 		\add_action( 'elementor/editor/before_enqueue_scripts', [ $this, 'init' ] );
+		\add_action( 'elementor/editor/footer', [ $this, 'start_output_buffering' ], 0 );
+		\add_action( 'elementor/editor/footer', [ $this, 'inject_yoast_tab' ], 999 );
 	}
 
 	/**
@@ -180,6 +180,44 @@ class Elementor implements Integration_Interface {
 		$this->asset_manager->register_assets();
 		$this->enqueue();
 		$this->render_hidden_fields();
+	}
+
+	/**
+	 * Start capturing buffer.
+	 *
+	 * @return void
+	 */
+	public function start_output_buffering() {
+		\ob_start();
+	}
+
+	/**
+	 * Injects the Yoast SEO tab into the Elements panel of the Elementor editor.
+	 *
+	 * @return void
+	 */
+	public function inject_yoast_tab() {
+		$output = \ob_get_clean();
+
+		// If the buffer is empty or the call failed, bail out.
+		if ( empty( $output ) ) {
+			return;
+		}
+
+		$search  = '/(<(div|button) class="elementor-component-tab elementor-panel-navigation-tab" data-tab="global">.*<\/(div|button)>)/m';
+		$replace = '${1}<${2} class="elementor-component-tab elementor-panel-navigation-tab" data-tab="yoast-seo-tab">Yoast SEO</${2}>';
+
+		$modified_output = \preg_replace( $search, $replace, $output );
+
+		// Check if preg_replace failed. If so, fallback to original output.
+		if ( $modified_output === null ) {
+			// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Reason: Already escaped output.
+			echo $output;
+			return;
+		}
+
+		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Reason: Already escaped output.
+		echo $modified_output;
 	}
 
 	// Below is mostly copied from `class-metabox.php`. That constructor has side-effects we do not need.
@@ -259,7 +297,7 @@ class Elementor implements Integration_Interface {
 			WPSEO_Meta::get_meta_field_defs( 'general', $post->post_type ),
 			WPSEO_Meta::get_meta_field_defs( 'advanced', $post->post_type ),
 			$social_fields,
-			WPSEO_Meta::get_meta_field_defs( 'schema', $post->post_type )
+			WPSEO_Meta::get_meta_field_defs( 'schema', $post->post_type ),
 		);
 
 		foreach ( $meta_boxes as $key => $meta_box ) {
@@ -373,7 +411,9 @@ class Elementor implements Integration_Interface {
 
 		$this->asset_manager->enqueue_style( 'admin-global' );
 		$this->asset_manager->enqueue_style( 'metabox-css' );
-		$this->asset_manager->enqueue_style( 'scoring' );
+		if ( $this->readability_analysis->is_enabled() ) {
+			$this->asset_manager->enqueue_style( 'scoring' );
+		}
 		$this->asset_manager->enqueue_style( 'monorepo' );
 		$this->asset_manager->enqueue_style( 'admin-css' );
 		$this->asset_manager->enqueue_style( 'ai-generator' );
@@ -382,13 +422,18 @@ class Elementor implements Integration_Interface {
 		$this->asset_manager->enqueue_script( 'admin-global' );
 		$this->asset_manager->enqueue_script( 'elementor' );
 
+		$is_v4_atomic = $this->is_elementor_v4_atomic_active();
+
+		if ( $is_v4_atomic ) {
+			$this->asset_manager->enqueue_script( 'elementor-v4' );
+		}
+
 		$this->asset_manager->localize_script( 'elementor', 'wpseoAdminGlobalL10n', \YoastSEO()->helpers->wincher->get_admin_global_links() );
 		$this->asset_manager->localize_script( 'elementor', 'wpseoAdminL10n', WPSEO_Utils::get_admin_l10n() );
 		$this->asset_manager->localize_script( 'elementor', 'wpseoFeaturesL10n', WPSEO_Utils::retrieve_enabled_features() );
 
 		$plugins_script_data = [
 			'replaceVars' => [
-				'no_parent_text'           => \__( '(no parent)', 'wordpress-seo' ),
 				'replace_vars'             => $this->get_replace_vars(),
 				'recommended_replace_vars' => $this->get_recommended_replace_vars(),
 				'hidden_replace_vars'      => $this->get_hidden_replace_vars(),
@@ -410,47 +455,88 @@ class Elementor implements Integration_Interface {
 			'enabled_features'        => WPSEO_Utils::retrieve_enabled_features(),
 		];
 
-		$woocommerce_conditional = new WooCommerce_Conditional();
-		$permalink               = $this->get_permalink();
+		$permalink        = $this->get_permalink();
+		$page_on_front    = (int) \get_option( 'page_on_front' );
+		$homepage_is_page = \get_option( 'show_on_front' ) === 'page';
+		$is_front_page    = $homepage_is_page && $page_on_front === $post_id;
 
 		$script_data = [
-			'media'                     => [ 'choose_image' => \__( 'Use Image', 'wordpress-seo' ) ],
 			'metabox'                   => $this->get_metabox_script_data( $permalink ),
-			'userLanguageCode'          => WPSEO_Language_Utils::get_language( \get_user_locale() ),
 			'isPost'                    => true,
 			'isBlockEditor'             => WP_Screen::get()->is_block_editor(),
 			'isElementorEditor'         => true,
-			'isWooCommerceActive'       => $woocommerce_conditional->is_met(),
+			'isAlwaysIntroductionV2'    => $this->is_elementor_version_compatible_with_introduction_v2(),
+			'isElementorV4Atomic'       => $is_v4_atomic,
 			'postStatus'                => \get_post_status( $post_id ),
 			'postType'                  => \get_post_type( $post_id ),
 			'analysis'                  => [
 				'plugins' => $plugins_script_data,
 				'worker'  => $worker_script_data,
 			],
-			'webinarIntroElementorUrl'  => WPSEO_Shortlinker::get( 'https://yoa.st/webinar-intro-elementor' ),
 			'usedKeywordsNonce'         => \wp_create_nonce( 'wpseo-keyword-usage-and-post-types' ),
+			'isFrontPage'               => $is_front_page,
 		];
 
 		/**
 		 * The website information repository.
 		 *
-		 * @var $repo Website_Information_Repository
+		 * @var Website_Information_Repository $repo
 		 */
 		$repo             = \YoastSEO()->classes->get( Website_Information_Repository::class );
 		$site_information = $repo->get_post_site_information();
 		$site_information->set_permalink( $permalink );
 		$script_data = \array_merge_recursive( $site_information->get_legacy_site_information(), $script_data );
 
-		if ( \post_type_supports( $this->get_metabox_post()->post_type, 'thumbnail' ) ) {
-			$this->asset_manager->enqueue_style( 'featured-image' );
+		$this->asset_manager->localize_script( 'elementor', 'wpseoScriptData', $script_data );
+	}
 
-			$script_data['featuredImage'] = [
-				'featured_image_notice' => \__( 'SEO issue: The featured image should be at least 200 by 200 pixels to be picked up by Facebook and other social media sites.', 'wordpress-seo' ),
-			];
+	/**
+	 * Checks whether the current Elementor version is compatible with our introduction v2.
+	 *
+	 * In version 3.30.0, Elementor removed the experimental flag for the editor v2.
+	 * Resulting in the editor v2 being the default.
+	 *
+	 * @return bool Whether the Elementor version is compatible with introduction v2.
+	 */
+	private function is_elementor_version_compatible_with_introduction_v2(): bool {
+		if ( ! \defined( 'ELEMENTOR_VERSION' ) ) {
+			return false;
 		}
 
-		$this->asset_manager->localize_script( 'elementor', 'wpseoScriptData', $script_data );
-		$this->asset_manager->enqueue_user_language_script();
+		// Take the semver version from their version string.
+		$matches = [];
+		$version = ( \preg_match( '/^([0-9]+.[0-9]+.[0-9]+)/', \ELEMENTOR_VERSION, $matches ) > 0 ) ? $matches[1] : \ELEMENTOR_VERSION;
+
+		// Check if the version is 3.30.0 or higher. This is where the editor v2 was taken out of the experimental into the default state.
+		return \version_compare( $version, '3.30.0', '>=' );
+	}
+
+	/**
+	 * Checks whether Elementor V4 (the atomic editor) is currently active on this site.
+	 *
+	 * Mirrors Elementor's own atomic check (`Atomic_Widgets\OptIn\Opt_In::EXPERIMENT_NAME`):
+	 * the `e_opt_in_v4` experiment is the authoritative signal for the atomic editor and is
+	 * only registered on Elementor versions that ship it, so `is_feature_active()` already
+	 * returns false on older versions or partial installs. No separate version gate is used:
+	 * the experiment is an opt-in to V4 that can be enabled before the major version bump, so
+	 * a version comparison would wrongly suppress sites that opt in early. Defensive at each
+	 * step so missing Elementor internals never throw.
+	 *
+	 * @return bool Whether the V4 atomic editor path should be used.
+	 */
+	private function is_elementor_v4_atomic_active(): bool {
+		if ( ! \class_exists( '\Elementor\Plugin' ) ) {
+			return false;
+		}
+		$elementor = ( Plugin::$instance ?? null );
+		if ( $elementor === null || ! isset( $elementor->experiments ) ) {
+			return false;
+		}
+		if ( ! \method_exists( $elementor->experiments, 'is_feature_active' ) ) {
+			return false;
+		}
+
+		return (bool) $elementor->experiments->is_feature_active( 'e_opt_in_v4' );
 	}
 
 	/**
@@ -463,7 +549,7 @@ class Elementor implements Integration_Interface {
 		\printf(
 			'<form id="yoast-form" method="post" action="%1$s"><input type="hidden" name="action" value="wpseo_elementor_save" /><input type="hidden" id="post_ID" name="post_id" value="%2$s" />',
 			\esc_url( \admin_url( 'admin-ajax.php' ) ),
-			\esc_attr( $this->get_metabox_post()->ID )
+			\esc_attr( $this->get_metabox_post()->ID ),
 		);
 
 		\wp_nonce_field( 'wpseo_elementor_save', '_wpseo_elementor_nonce' );
@@ -486,40 +572,18 @@ class Elementor implements Integration_Interface {
 		\printf(
 			'<input type="hidden" id="%1$s" name="%1$s" value="%2$s" />',
 			\esc_attr( WPSEO_Meta::$form_prefix . 'slug' ),
-			\esc_attr( $this->get_post_slug() )
+			/**
+			 * It is important that this slug value is the same as in the database.
+			 * If the DB value is empty we can auto-generate a slug.
+			 * But if not empty, we should not touch it anymore.
+			 */
+			\esc_attr( $this->get_metabox_post()->post_name ),
 		);
 
 		// phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- Output should be escaped in the filter.
 		echo \apply_filters( 'wpseo_elementor_hidden_fields', '' );
 
 		echo '</form>';
-	}
-
-	/**
-	 * Returns the slug for the post being edited.
-	 *
-	 * @return string
-	 */
-	protected function get_post_slug() {
-		$post = $this->get_metabox_post();
-
-		// In case get_metabox_post returns null for whatever reason.
-		if ( ! $post instanceof WP_Post ) {
-			return '';
-		}
-
-		// Drafts might not have a post_name unless the slug has been manually changed.
-		// In this case we get it using get_sample_permalink.
-		if ( ! $post->post_name ) {
-			$sample = \get_sample_permalink( $post );
-
-			// Since get_sample_permalink runs through filters, ensure that it has the expected return value.
-			if ( \is_array( $sample ) && \count( $sample ) === 2 && \is_string( $sample[1] ) ) {
-				return $sample[1];
-			}
-		}
-
-		return $post->post_name;
 	}
 
 	/**
@@ -546,7 +610,7 @@ class Elementor implements Integration_Interface {
 	 */
 	protected function get_metabox_script_data( $permalink ) {
 		$post_formatter = new WPSEO_Metabox_Formatter(
-			new WPSEO_Post_Metabox_Formatter( $this->get_metabox_post(), [], $permalink )
+			new WPSEO_Post_Metabox_Formatter( $this->get_metabox_post(), [], $permalink ),
 		);
 
 		$values = $post_formatter->get_values();
@@ -730,7 +794,7 @@ class Elementor implements Integration_Interface {
 			[
 				\YoastSEO()->meta->for_post( $post->ID )->presentation->title,
 				\YoastSEO()->meta->for_post( $post->ID )->presentation->meta_description,
-			]
+			],
 		);
 
 		\preg_match_all( '/%%cf_([A-Za-z0-9_]+)%%/', $replace_vars_fields, $matches );

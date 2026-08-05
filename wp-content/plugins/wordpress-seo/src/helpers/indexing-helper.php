@@ -123,9 +123,7 @@ class Indexing_Helper {
 	 *
 	 * @return void
 	 */
-	public function set_indexable_repository(
-		Indexable_Repository $indexable_repository
-	) {
+	public function set_indexable_repository( Indexable_Repository $indexable_repository ) {
 		$this->indexable_repository = $indexable_repository;
 	}
 
@@ -180,7 +178,7 @@ class Indexing_Helper {
 	 */
 	protected function remove_indexing_notification() {
 		$this->notification_center->remove_notification_by_id(
-			Indexing_Notification_Integration::NOTIFICATION_ID
+			Indexing_Notification_Integration::NOTIFICATION_ID,
 		);
 	}
 

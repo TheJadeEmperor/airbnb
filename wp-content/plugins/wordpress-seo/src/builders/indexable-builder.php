@@ -278,7 +278,7 @@ class Indexable_Builder {
 		$author_indexable = $this->indexable_repository->find_by_id_and_type(
 			$author_id,
 			'user',
-			false
+			false,
 		);
 		if ( ! $author_indexable || $this->version_manager->indexable_needs_upgrade( $author_indexable ) ) {
 			// Try to build the author.
@@ -380,9 +380,8 @@ class Indexable_Builder {
 			}
 
 			return $this->indexable_helper->save_indexable( $indexable, $indexable_before );
-		}
-		catch ( Source_Exception $exception ) {
-			if ( ! $this->is_type_with_no_id( $indexable->object_type ) && ( ! isset( $indexable->object_id ) || \is_null( $indexable->object_id ) ) ) {
+		} catch ( Source_Exception $exception ) {
+			if ( ! $this->is_type_with_no_id( $indexable->object_type ) && ! isset( $indexable->object_id ) ) {
 				return false;
 			}
 
@@ -399,7 +398,7 @@ class Indexable_Builder {
 					'object_type' => $indexable->object_type,
 					'post_status' => 'unindexed',
 					'version'     => 0,
-				]
+				],
 			);
 			// If we already had an existing indexable, mark it as unindexed. We cannot rely on its validity anymore.
 			$indexable->post_status = 'unindexed';
@@ -407,8 +406,7 @@ class Indexable_Builder {
 			$indexable = $this->version_manager->set_latest( $indexable );
 
 			return $this->indexable_helper->save_indexable( $indexable, $indexable_before );
-		}
-		catch ( Not_Built_Exception $exception ) {
+		} catch ( Not_Built_Exception $exception ) {
 			return false;
 		}
 	}

@@ -1,4 +1,5 @@
 <?php
+
 // phpcs:disable Yoast.NamingConventions.NamespaceName.TooLong
 namespace Yoast\WP\SEO\Editors\Framework;
 
@@ -11,6 +12,8 @@ use Yoast\WP\SEO\Helpers\Product_Helper;
  * Describes the inclusive language analysis feature.
  */
 class Inclusive_Language_Analysis implements Analysis_Feature_Interface {
+
+	public const NAME = 'inclusiveLanguageAnalysis';
 
 	/**
 	 * The options helper.
@@ -102,7 +105,7 @@ class Inclusive_Language_Analysis implements Analysis_Feature_Interface {
 	 * @return string The name.
 	 */
 	public function get_name(): string {
-		return 'inclusiveLanguageAnalysis';
+		return self::NAME;
 	}
 
 	/**

@@ -78,7 +78,7 @@ class WPSEO_Upgrade_History {
 	 *
 	 * @param array<string> $option_names The option names to retrieve.
 	 *
-	 * @return array<int|string|bool|float,array<string|int|bool|float>> The retrieved data.
+	 * @return array<int|string, array<string|int|bool|float>> The retrieved data.
 	 */
 	protected function get_options_data( array $option_names ) {
 		$wpdb = $this->get_wpdb();
@@ -89,9 +89,9 @@ class WPSEO_Upgrade_History {
 				SELECT %i, %i FROM ' . $wpdb->options . ' WHERE
 				%i IN ( ' . implode( ',', array_fill( 0, count( $option_names ), '%s' ) ) . ' )
 				',
-				array_merge( [ 'option_value', 'option_name', 'option_name' ], $option_names )
+				array_merge( [ 'option_value', 'option_name', 'option_name' ], $option_names ),
 			),
-			ARRAY_A
+			ARRAY_A,
 		);
 
 		$data = [];

@@ -16,7 +16,7 @@ function lbs_onboarding_db() {
     static $pdo = null;
     if ($pdo === null) {
         $DB_HOST = 'localhost';
-        $DB_NAME = 'props';
+        $DB_NAME = 'rentals';
         $DB_USER = 'root';
         $DB_PASS = 'password';
 

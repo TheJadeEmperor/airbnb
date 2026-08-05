@@ -16,7 +16,7 @@ class Cleanup_Integration implements Integration_Interface {
 	/**
 	 * The cleanup service.
 	 *
-	 * @var Cleanup_Service $cleanup_service The cleanup service.
+	 * @var Cleanup_Service
 	 */
 	private $cleanup_service;
 
@@ -52,7 +52,7 @@ class Cleanup_Integration implements Integration_Interface {
 				'clean_selected_empty_usermeta' => function ( $limit ) {
 					return $this->cleanup_service->cleanup_selected_empty_usermeta( $limit );
 				},
-			]
+			],
 		);
 	}
 }

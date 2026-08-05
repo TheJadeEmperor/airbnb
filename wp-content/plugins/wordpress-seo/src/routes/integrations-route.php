@@ -41,9 +41,7 @@ class Integrations_Route implements Route_Interface {
 	 *
 	 * @param Integrations_Action $integrations_action The integrations action.
 	 */
-	public function __construct(
-		Integrations_Action $integrations_action
-	) {
+	public function __construct( Integrations_Action $integrations_action ) {
 		$this->integrations_action = $integrations_action;
 	}
 
@@ -97,7 +95,7 @@ class Integrations_Route implements Route_Interface {
 			->set_integration_active( $integration_name, $value );
 
 		return new WP_REST_Response(
-			[ 'json' => $data ]
+			[ 'json' => $data ],
 		);
 	}
 }

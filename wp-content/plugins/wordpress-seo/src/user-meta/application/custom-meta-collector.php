@@ -14,7 +14,7 @@ class Custom_Meta_Collector {
 	/**
 	 * All custom meta.
 	 *
-	 * @var array<Custom_Meta_Interface> $custom_meta
+	 * @var array<Custom_Meta_Interface>
 	 */
 	private $custom_meta;
 
@@ -48,7 +48,7 @@ class Custom_Meta_Collector {
 			$custom_meta,
 			static function ( Custom_Meta_Interface $a, Custom_Meta_Interface $b ) {
 				return ( $a->get_render_priority() <=> $b->get_render_priority() );
-			}
+			},
 		);
 
 		return $custom_meta;

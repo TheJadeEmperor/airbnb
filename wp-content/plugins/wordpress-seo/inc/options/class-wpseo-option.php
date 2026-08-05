@@ -137,7 +137,6 @@ abstract class WPSEO_Option {
 	 */
 	protected static $instance;
 
-
 	/* *********** INSTANTIATION METHODS *********** */
 
 	/**
@@ -314,6 +313,7 @@ abstract class WPSEO_Option {
 
 				switch ( $key ) {
 					case 'googleverify':
+					case 'ahrefsverify':
 					case 'baiduverify':
 						$regex = '`^[A-Za-z0-9_-]+$`';
 						break;
